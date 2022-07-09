@@ -7,8 +7,12 @@ import {
   Text,
   useColorScheme,
   View,
+  Alert,
 } from 'react-native';
 import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
+import messaging from '@react-native-firebase/messaging';
+
+var fcmUnsubscribe = null;
 
 const Section = ({children, title}) => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -35,6 +39,37 @@ const Section = ({children, title}) => {
 };
 
 class App extends React.Component {
+  componentDidMount() {
+    messaging()
+      .requestPermission()
+      .then(authStatus => {
+        console.log('APNs Status: ', authStatus);
+
+        if (
+          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+          authStatus == messaging.AuthorizationStatus.PROVISIONAL
+        ) {
+          messaging()
+            .getToken()
+            .then(token => {
+              console.log('messaging.getToken: ', token);
+            });
+          messaging().onTokenRefresh(token => {
+            console.log('messaging.onTokenRefresh: ', token);
+          });
+          fcmUnsubscribe = messaging().onMessage(async remoteMessage => {
+            Alert.alert(
+              remoteMessage.notification.title,
+              remoteMessage.notification.body,
+            );
+          });
+        }
+      })
+      .catch(err => {
+        console.log('messaging.requestPermission Error: ', err);
+      });
+  }
+
   render() {
     return (
       <SafeAreaView>
